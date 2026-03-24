@@ -1,0 +1,105 @@
+{
+  "name": "hermes",
+  "version": "0.1.0",
+  "description": "Multi-agent terminal workspace for Claude Code with a built-in MCP server",
+  "author": "Pantheon Forge",
+  "license": "MIT",
+  "homepage": "https://github.com/pantheonforge/hermes",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pantheonforge/hermes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pantheonforge/hermes/issues"
+  },
+  "keywords": ["electron", "terminal", "claude-code", "mcp", "multi-agent", "ai"],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "src/main/index.js",
+  "scripts": {
+    "icons": "node src/scripts/generate-icons.js",
+    "prebuild": "npm run icons",
+    "dev": "concurrently -n VITE,ELECTRON -c cyan,yellow --kill-others \"vite\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development HERMES_MCP_PORT=3460 electron .\"",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dist": "npm run build && npx electron-builder",
+    "dist:win": "npm run build && npx electron-builder --win nsis",
+    "dist:win-portable": "npm run build && npx electron-builder --win portable",
+    "dist:mac": "npm run build && npx electron-builder --mac dmg",
+    "dist:linux": "npm run build && npx electron-builder --linux",
+    "rebuild": "npx @electron/rebuild --only better-sqlite3",
+    "postinstall": "npx @electron/rebuild --only better-sqlite3"
+  },
+  "dependencies": {
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
+    "@xenova/transformers": "^2.17.2",
+    "better-sqlite3": "^12.6.2",
+    "cors": "^2.8.5",
+    "electron-store": "^8.2.0",
+    "express": "^4.18.2",
+    "fastembed": "^1.14.1",
+    "highlight.js": "^11.11.1",
+    "ignore": "^7.0.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^29.0.0",
+    "@electron/rebuild": "^3.6.0",
+    "electron-builder": "^26.8.1",
+    "vite": "^5.0.10",
+    "vitest": "^2.1.9",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.hermes.app",
+    "productName": "Hermes",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "compression": "maximum",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/main/**/*",
+      "dist/**/*",
+      "src/shared/**/*",
+      "assets/**/*",
+      "preload.js",
+      "!**/node_modules/onnxruntime-web/**"
+    ],
+    "asarUnpack": [
+      "**/node_modules/@homebridge/node-pty-prebuilt-multiarch/**",
+      "**/node_modules/fastembed/**",
+      "**/node_modules/@xenova/transformers/**",
+      "**/node_modules/better-sqlite3/**"
+    ],
+    "mac": {
+      "icon": "assets/icon.png",
+      "target": ["dmg"]
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "electronLanguages": [
+        "en-US"
+      ],
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "linux": {
+      "icon": "assets/icon.png"
+    }
+  }
+}

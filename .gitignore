@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+release/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+
+# Electron native rebuild
+rebuild.log
+
+# Local project files
+tasks/
+local_cache/
+.claude/
+
+# Agent instruction files (runtime config, not for contributors)
+CLAUDE.md
+AGENTS.md
+GEMINI.md
