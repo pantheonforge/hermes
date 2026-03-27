@@ -1,5 +1,7 @@
 const { execFile } = require('child_process');
-const { ipcMain } = require('electron');
+const fs = require('fs');
+const path = require('path');
+const { ipcMain, shell } = require('electron');
 const { IPC } = require('../shared/constants');
 
 function gitRun(cwd, args) {
@@ -129,6 +131,38 @@ function setup() {
   ipcMain.handle(IPC.GIT_PUSH, async (_e, cwd) => {
     try {
       await gitRun(String(cwd || '').trim() || undefined, ['push']);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle(IPC.GIT_BRANCH, async (_e, cwd) => {
+    try {
+      const out = await gitRun(String(cwd || '').trim() || undefined, ['rev-parse', '--abbrev-ref', 'HEAD']);
+      return { ok: true, branch: out.trim() };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle(IPC.GIT_GITIGNORE, async (_e, cwd, file) => {
+    try {
+      const safeCwd = String(cwd || '').trim();
+      const safeFile = validatePath(file);
+      const giPath = path.join(safeCwd, '.gitignore');
+      let existing = '';
+      try { existing = fs.readFileSync(giPath, 'utf8'); } catch { /* file doesn't exist yet */ }
+      const lines = existing.split('\n').map((l) => l.trim());
+      if (lines.includes(safeFile)) return { ok: true, already: true };
+      const append = (existing.length > 0 && !existing.endsWith('\n') ? '\n' : '') + safeFile + '\n';
+      fs.writeFileSync(giPath, existing + append, 'utf8');
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle(IPC.SHELL_SHOW_IN_FOLDER, async (_e, fullPath) => {
+    try {
+      shell.showItemInFolder(String(fullPath || ''));
       return { ok: true };
     } catch (err) {
       return { ok: false, error: err.message };

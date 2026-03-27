@@ -38,6 +38,44 @@ function DiffView({ diff }) {
   );
 }
 
+function ContextMenu({ menu, onClose, onAction }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown, true);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [onClose]);
+
+  const act = (action) => { onClose(); onAction(action); };
+
+  return (
+    <div
+      ref={ref}
+      className="git-ctx-menu"
+      style={{ left: menu.x, top: menu.y }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <button className="git-ctx-item" onClick={() => act('gitignore')}>Add to .gitignore</button>
+      <button className="git-ctx-item" onClick={() => act('copy-path')}>Copy path</button>
+      <button className="git-ctx-item" onClick={() => act('reveal')}>Reveal in explorer</button>
+      <div className="git-ctx-divider" />
+      {menu.isStaged
+        ? <button className="git-ctx-item" onClick={() => act('unstage')}>Unstage</button>
+        : <button className="git-ctx-item" onClick={() => act('stage')}>Stage</button>
+      }
+      {!menu.isStaged && (
+        <button className="git-ctx-item danger" onClick={() => act('discard')}>Discard changes</button>
+      )}
+    </div>
+  );
+}
+
 export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
   const [view, setView] = useState('changes');
   const [staged, setStaged] = useState([]);
@@ -56,6 +94,10 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
   const [logLimit, setLogLimit] = useState(200);
   const [selectedDiffFile, setSelectedDiffFile] = useState(null);
   const [pushing, setPushing] = useState(false);
+  const [branch, setBranch] = useState('');
+  const [ctxMenu, setCtxMenu] = useState(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(null);
+  const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
   const filterTimerRef = useRef(null);
 
   const showToast = (msg) => {
@@ -63,23 +105,33 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
     setTimeout(() => setToast(''), 2500);
   };
 
+  const loadBranch = useCallback(async () => {
+    if (!cwd) return;
+    const res = await window.electron.git.branch(cwd).catch(() => null);
+    if (res?.ok) setBranch(res.branch);
+    else setBranch('');
+  }, [cwd]);
+
   const refresh = useCallback(async () => {
     setBusy(true);
     setError('');
     try {
-      const res = await window.electron.git.status(cwd);
-      if (res.ok) {
-        setStaged(res.staged || []);
-        setUnstaged(res.unstaged || []);
+      const [statusRes] = await Promise.all([
+        window.electron.git.status(cwd),
+        loadBranch(),
+      ]);
+      if (statusRes.ok) {
+        setStaged(statusRes.staged || []);
+        setUnstaged(statusRes.unstaged || []);
       } else {
-        setError(res.error || 'git status failed');
+        setError(statusRes.error || 'git status failed');
       }
     } catch (e) {
       setError(e.message || 'git status failed');
     } finally {
       setBusy(false);
     }
-  }, [cwd]);
+  }, [cwd, loadBranch]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -145,6 +197,17 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
     const res = await window.electron.git.discard(cwd, file);
     if (res.ok) { showToast(`Discarded ${file}`); refresh(); }
     else setError(res.error || 'discard failed');
+    setConfirmDiscard(null);
+  };
+
+  const handleDiscardAll = async () => {
+    setConfirmDiscardAll(false);
+    const discardable = unstaged.filter(({ status: s }) => s !== '??');
+    for (const { file } of discardable) {
+      await window.electron.git.discard(cwd, file);
+    }
+    showToast('Discarded all changes');
+    refresh();
   };
 
   const handleCommit = async () => {
@@ -183,12 +246,52 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
     else setError(res.error || 'push failed');
   };
 
+  const handleCtxAction = async (action) => {
+    const { file, isStaged } = ctxMenu;
+    if (action === 'gitignore') {
+      const res = await window.electron.git.gitignore(cwd, file);
+      if (res.ok) { showToast(res.already ? `Already in .gitignore` : `Added ${file} to .gitignore`); refresh(); }
+      else setError(res.error || 'gitignore failed');
+    } else if (action === 'copy-path') {
+      await window.electron.clipboard.writeText(file).catch(() => {});
+      showToast('Path copied');
+    } else if (action === 'reveal') {
+      const fullPath = cwd ? `${cwd}/${file}` : file;
+      await window.electron.shell.showInFolder(fullPath).catch(() => {});
+    } else if (action === 'stage') {
+      await handleStage(file);
+    } else if (action === 'unstage') {
+      await handleUnstage(file);
+    } else if (action === 'discard') {
+      setConfirmDiscard(file);
+    }
+  };
+
+  const openCtxMenu = (e, file, status, isStaged) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCtxMenu({ x: e.clientX, y: e.clientY, file, status, isStaged });
+  };
+
+  const copyHash = async (hash) => {
+    await window.electron.clipboard.writeText(hash).catch(() => {});
+    showToast('Hash copied');
+  };
+
   const commitDiffFiles = useMemo(() => parseCommitDiffByFile(commitDiff), [commitDiff]);
 
   useEffect(() => { setSelectedDiffFile(null); }, [selectedCommit]);
 
   return (
     <div className="git-panel" onClick={onFocus}>
+      {ctxMenu && (
+        <ContextMenu
+          menu={ctxMenu}
+          onClose={() => setCtxMenu(null)}
+          onAction={handleCtxAction}
+        />
+      )}
+
       <div className="git-header">
         <svg className="git-logo" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="7" cy="6" r="2" />
@@ -197,7 +300,8 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
           <path d="M7 8v8M9 6c3 0 6 2 6 5" />
         </svg>
         <span className="git-title">Git</span>
-        {cwd && <span className="git-cwd" title={cwd}>{cwd}</span>}
+        {branch && <span className="git-cwd" title={branch}>{branch}</span>}
+        {cwd && <span className="git-cwd" title={cwd} style={{ opacity: 0.5 }}>{cwd}</span>}
         <div className="git-header-actions">
           <button className="manager-hide-btn" onClick={(e) => { e.stopPropagation(); if (view === 'changes') refresh(); else loadLog(fileFilter || null); }} title="Refresh" disabled={busy || logBusy}>R</button>
           <button className="manager-hide-btn" onClick={(e) => { e.stopPropagation(); handlePush(); }} title="Push" disabled={pushing}>↑</button>
@@ -224,7 +328,7 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
               {staged.length === 0
                 ? <div className="git-empty">Nothing staged</div>
                 : staged.map(({ file, status: s }) => (
-                  <div key={file} className={`git-file${selected?.file === file && selected?.staged ? ' active' : ''}`}>
+                  <div key={file} className={`git-file${selected?.file === file && selected?.staged ? ' active' : ''}`} onContextMenu={(e) => openCtxMenu(e, file, s, true)}>
                     <button className="git-file-name" onClick={() => loadDiff(file, true)} title={file}>
                       <span className={`git-badge git-badge-${statusClass(s)}`}>{statusLabel(s)}</span>
                       <span className="git-file-path">{file}</span>
@@ -239,24 +343,49 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
               <div className="git-section-header">
                 <span className="git-section-title">Changes ({unstaged.length})</span>
                 {unstaged.length > 0 && (
-                  <button className="git-section-action" onClick={stageAll} title="Stage all">Stage all</button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {unstaged.some(({ status: s }) => s !== '??') && (
+                      confirmDiscardAll
+                        ? (
+                          <div className="git-discard-confirm" style={{ padding: '0', background: 'none' }}>
+                            <div className="git-discard-confirm-btns">
+                              <button className="confirm" onClick={handleDiscardAll}>Discard all</button>
+                              <button className="cancel" onClick={() => setConfirmDiscardAll(false)}>Cancel</button>
+                            </div>
+                          </div>
+                        )
+                        : <button className="git-section-action" onClick={() => setConfirmDiscardAll(true)} title="Discard all tracked changes">Discard all</button>
+                    )}
+                    <button className="git-section-action" onClick={stageAll} title="Stage all">Stage all</button>
+                  </div>
                 )}
               </div>
               {unstaged.length === 0
                 ? <div className="git-empty">Working tree clean</div>
                 : unstaged.map(({ file, status: s }) => (
-                  <div key={file} className={`git-file${selected?.file === file && !selected?.staged ? ' active' : ''}`}>
-                    <button className="git-file-name" onClick={() => loadDiff(file, false)} title={file}>
-                      <span className={`git-badge git-badge-${statusClass(s)}`}>{statusLabel(s)}</span>
-                      <span className="git-file-path">{file}</span>
-                    </button>
-                    <div className="git-file-btns">
-                      {s !== '??' && (
-                        <button className="git-action-btn danger" onClick={() => handleDiscard(file)} title="Discard changes">✕</button>
-                      )}
-                      <button className="git-action-btn" onClick={() => handleStage(file)} title="Stage">+</button>
+                  <React.Fragment key={file}>
+                    <div className={`git-file${selected?.file === file && !selected?.staged ? ' active' : ''}`} onContextMenu={(e) => openCtxMenu(e, file, s, false)}>
+                      <button className="git-file-name" onClick={() => loadDiff(file, false)} title={file}>
+                        <span className={`git-badge git-badge-${statusClass(s)}`}>{statusLabel(s)}</span>
+                        <span className="git-file-path">{file}</span>
+                      </button>
+                      <div className="git-file-btns">
+                        {s !== '??' && (
+                          <button className="git-action-btn danger" onClick={() => setConfirmDiscard(file)} title="Discard changes">✕</button>
+                        )}
+                        <button className="git-action-btn" onClick={() => handleStage(file)} title="Stage">+</button>
+                      </div>
                     </div>
-                  </div>
+                    {confirmDiscard === file && (
+                      <div className="git-discard-confirm">
+                        <span>Discard changes?</span>
+                        <div className="git-discard-confirm-btns">
+                          <button className="confirm" onClick={() => handleDiscard(file)}>Confirm</button>
+                          <button className="cancel" onClick={() => setConfirmDiscard(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                  </React.Fragment>
                 ))
               }
             </div>
@@ -316,7 +445,11 @@ export default function GitWorkflowPanel({ cwd, onHide, onFocus }) {
                 className={`git-commit-row${selectedCommit === c.hash ? ' active' : ''}`}
                 onClick={() => { setSelectedCommit(c.hash); loadCommitDiff(c.hash); }}
               >
-                <span className="git-commit-hash">{c.shortHash}</span>
+                <span
+                  className="git-commit-hash"
+                  title="Click to copy full hash"
+                  onClick={(e) => { e.stopPropagation(); copyHash(c.hash); }}
+                >{c.shortHash}</span>
                 <span className="git-commit-subject">{c.subject}</span>
                 <span className="git-commit-meta">{c.author} · {c.relativeDate}</span>
               </div>

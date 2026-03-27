@@ -133,6 +133,12 @@ contextBridge.exposeInMainWorld('electron', {
     log: (cwd, filePath, limit) => ipcRenderer.invoke(IPC.GIT_LOG, cwd, filePath, limit),
     show: (cwd, hash) => ipcRenderer.invoke(IPC.GIT_SHOW, cwd, hash),
     push: (cwd) => ipcRenderer.invoke(IPC.GIT_PUSH, cwd),
+    branch: (cwd) => ipcRenderer.invoke(IPC.GIT_BRANCH, cwd),
+    gitignore: (cwd, file) => ipcRenderer.invoke(IPC.GIT_GITIGNORE, cwd, file),
+  },
+
+  shell: {
+    showInFolder: (fullPath) => ipcRenderer.invoke(IPC.SHELL_SHOW_IN_FOLDER, fullPath),
   },
 
   context: {

@@ -118,6 +118,9 @@ const IPC = {
   GIT_LOG: 'git:log',
   GIT_SHOW: 'git:show',
   GIT_PUSH: 'git:push',
+  GIT_BRANCH: 'git:branch',
+  GIT_GITIGNORE: 'git:gitignore',
+  SHELL_SHOW_IN_FOLDER: 'shell:show-in-folder',
 
   TOGGLE_PALETTE: 'app:toggle-palette',
 
