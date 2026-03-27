@@ -79,6 +79,7 @@
       "**/node_modules/@homebridge/node-pty-prebuilt-multiarch/**",
       "**/node_modules/fastembed/**",
       "**/node_modules/@xenova/transformers/**",
+      "**/node_modules/onnxruntime-node/**",
       "**/node_modules/better-sqlite3/**"
     ],
     "mac": {
