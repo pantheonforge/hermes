@@ -242,6 +242,18 @@ html, body, #root {
   min-width: 56px;
 }
 
+.tab-rename {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  min-width: 56px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  width: auto;
+}
+
 .tab-chip.active .tab-main { color: var(--text); }
 
 .tab-close {

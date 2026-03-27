@@ -199,6 +199,8 @@ export default function App() {
   const [activeTabId, setActiveTabId] = useState('tab-1');
   const [nextTabId, setNextTabId] = useState(2);
   const [nextTermId, setNextTermId] = useState(1);
+  const [renamingTabId, setRenamingTabId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
@@ -232,7 +234,10 @@ export default function App() {
     const n = nextTabIdRef.current;
     nextTabIdRef.current = n + 1;
     setNextTabId(n + 1);
-    return { id: `tab-${n}`, title: `Tab ${n}` };
+    const existing = new Set(tabsRef.current.map((t) => t.title));
+    let x = 1;
+    while (existing.has(`Tab ${x}`)) x++;
+    return { id: `tab-${n}`, title: `Tab ${x}` };
   }, []);
 
   const getTabActionsRef = useCallback((tabId) => {
@@ -1566,7 +1571,29 @@ export default function App() {
             <div className="tabs-bar">
               {tabs.map((tab) => (
                 <div key={tab.id} className={`tab-chip${tab.id === activeTabId ? ' active' : ''}`}>
-                  <button className="tab-main" onClick={() => setActiveTabId(tab.id)}>{tab.title}</button>
+                  {renamingTabId === tab.id ? (
+                    <input
+                      className="tab-rename"
+                      value={renameValue}
+                      autoFocus
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => {
+                        const v = renameValue.trim();
+                        if (v) updateTab(tab.id, (t) => ({ ...t, title: v }));
+                        setRenamingTabId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.target.blur();
+                        if (e.key === 'Escape') setRenamingTabId(null);
+                      }}
+                    />
+                  ) : (
+                    <button
+                      className="tab-main"
+                      onClick={() => setActiveTabId(tab.id)}
+                      onDoubleClick={() => { setActiveTabId(tab.id); setRenamingTabId(tab.id); setRenameValue(tab.title); }}
+                    >{tab.title}</button>
+                  )}
                   {tabs.length > 1 && (
                     <button className="tab-close" onClick={() => closeTab(tab.id)} title="Close tab">x</button>
                   )}
