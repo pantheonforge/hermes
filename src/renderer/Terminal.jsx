@@ -437,6 +437,7 @@ const Terminal = forwardRef(function Terminal(
         return ` -c 'mcp_servers.hermes.url="http://localhost:${port}"' -c 'mcp_servers.hermes.transport="streamable_http"' -c 'mcp_servers.hermes.enabled=true'`;
       })()
       : (config.mcpConfigPath ? ` --mcp-config "${config.mcpConfigPath}"` : '');
+    const autoModeFlag = (tool === 'claude' && config.claudeAutoMode) ? ' --enable-auto-mode' : '';
     if (Number(config.mcpPort || 0) > 0) {
       try {
         await window.electron.mcp.registerAgent({
@@ -446,12 +447,12 @@ const Terminal = forwardRef(function Terminal(
         });
       } catch { }
     }
-    const command = `${cmd}${mcpFlag}`;
+    const command = `${cmd}${mcpFlag}${autoModeFlag}`;
     addHistoryEntries([command]);
     window.electron.pty.input(id, `${command}\r`);
     inputBufferRef.current = '';
     setHintSuffix('');
-  }, [id, ptyReady, config.claudeCmd, config.codexCmd, config.cwd, config.mcpConfigPath, config.mcpPort, addHistoryEntries]);
+  }, [id, ptyReady, config.claudeCmd, config.codexCmd, config.cwd, config.mcpConfigPath, config.mcpPort, config.claudeAutoMode, addHistoryEntries]);
 
   const launchClaude = useCallback(() => {
     launchTool('claude');

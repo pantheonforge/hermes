@@ -303,11 +303,14 @@ export default function App() {
         baseCmd += ` --mcp-config "${config.mcpConfigPath}"`;
       }
     }
+    if (session.tool === 'claude' && config?.claudeAutoMode) {
+      baseCmd += ' --enable-auto-mode';
+    }
     tabActionRefs.current[tabId]?.current.runCommand?.(targetPane, `${baseCmd}\r`);
     const refs = await window.electron.sessions.touch(session.id);
     setSessionRefs(refs);
     setActiveContext('terminal');
-  }, [focusPane, getTabById, config?.mcpPort, config?.mcpConfigPath]);
+  }, [focusPane, getTabById, config?.mcpPort, config?.mcpConfigPath, config?.claudeAutoMode]);
 
   const restartPaneInTab = useCallback((tabId, paneId) => {
     tabActionRefs.current[tabId]?.current.restartShell?.(paneId);

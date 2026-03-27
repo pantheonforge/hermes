@@ -156,6 +156,7 @@ const DEFAULTS = {
   memoryIgnoreGlobs: ['.git', 'node_modules', 'dist', 'build', '.next', '.cache'],
   workspaceSnapshot: null,
   usagePollingEnabled: false,
+  claudeAutoMode: false,
 };
 
 const MCP_PORT = 2337;

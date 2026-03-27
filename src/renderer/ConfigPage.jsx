@@ -14,6 +14,7 @@ export default function ConfigPage({ config, onSave, onClose, onManageLayouts })
     memoryProjectPath: config.memoryProjectPath || config.cwd || '',
     promptDraftsFolder: config.promptDraftsFolder || '',
     usagePollingEnabled: config.usagePollingEnabled ?? false,
+    claudeAutoMode: config.claudeAutoMode ?? false,
   });
 
   const defaultLayoutName = useMemo(() => {
@@ -44,6 +45,7 @@ export default function ConfigPage({ config, onSave, onClose, onManageLayouts })
       memoryProjectPath: form.memoryProjectPath,
       promptDraftsFolder: form.promptDraftsFolder,
       usagePollingEnabled: form.usagePollingEnabled,
+      claudeAutoMode: form.claudeAutoMode,
     });
   };
 
@@ -178,6 +180,18 @@ export default function ConfigPage({ config, onSave, onClose, onManageLayouts })
               ))}
             </div>
             <div className="field-hint">Labels for terminals 1-4</div>
+          </div>
+
+          <div className="field-group" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+            <label className="field-label">Claude auto-mode</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 12 }}>
+              <input
+                type="checkbox"
+                checked={form.claudeAutoMode}
+                onChange={(e) => set('claudeAutoMode', e.target.checked)}
+              />
+              Launch Claude with <code style={{ fontSize: 11 }}>--enable-auto-mode</code>
+            </label>
           </div>
 
           <div className="field-group" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>

@@ -33,6 +33,7 @@ const store = new Store({
     sessionRefs: [],
     workspaceSnapshot: DEFAULTS.workspaceSnapshot,
     usagePollingEnabled: DEFAULTS.usagePollingEnabled,
+    claudeAutoMode: DEFAULTS.claudeAutoMode,
   },
 });
 
