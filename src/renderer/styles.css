@@ -1988,6 +1988,16 @@ html, body, #root {
   background: linear-gradient(90deg, #37d676 0%, #a8ffcb 100%);
 }
 
+.horizon-line--loading {
+  background: rgba(255, 160, 50, 0.15);
+  animation: horizon-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes horizon-pulse {
+  0%, 100% { background: rgba(255, 160, 50, 0.1); }
+  50%       { background: rgba(255, 160, 50, 0.35); }
+}
+
 .horizon-line--error .horizon-fill {
   background: linear-gradient(90deg, rgba(220, 53, 69, 0.4) 0%, #dc3545 100%);
 }

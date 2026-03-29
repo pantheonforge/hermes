@@ -56,6 +56,25 @@ function HorizonLine() {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  if (usage?.loading) {
+    return (
+      <span
+        ref={barRef}
+        className="horizon-line horizon-line--loading"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {hovered && (
+          <span className="horizon-tooltip">
+            <span className="horizon-tooltip-row">
+              <span>usage</span><span>loading…</span>
+            </span>
+          </span>
+        )}
+      </span>
+    );
+  }
+
   if (usage?.rateLimited) {
     return (
       <span

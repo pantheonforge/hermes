@@ -85,6 +85,9 @@ class UsageWatcher {
   }
 
   start() {
+    if (this._getEnabled()) {
+      this._last = { loading: true };
+    }
     this._poll();
     this._interval = setInterval(() => this._poll(), POLL_MS);
   }
