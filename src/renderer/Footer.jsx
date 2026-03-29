@@ -51,6 +51,33 @@ function HorizonLine() {
     return unsub;
   }, []);
 
+  const formatTime = (iso) => {
+    if (!iso) return null;
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (usage?.rateLimited) {
+    return (
+      <span
+        ref={barRef}
+        className="horizon-line horizon-line--error"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <span className="horizon-pct horizon-pct--error">429</span>
+        <span className="horizon-fill" style={{ width: '100%' }} />
+        {hovered && (
+          <span className="horizon-tooltip">
+            <span className="horizon-tooltip-row horizon-tooltip-error">
+              <span>rate limited</span>
+              <span>{usage.retryAt ? `retry ${formatTime(usage.retryAt)}` : '—'}</span>
+            </span>
+          </span>
+        )}
+      </span>
+    );
+  }
+
   if (!usage?.fiveHour) {
     return <span className="horizon-line horizon-line--inactive" />;
   }
@@ -58,11 +85,6 @@ function HorizonLine() {
   const pct = Math.min(usage.fiveHour.utilization / 100, 1);
   const pctDisplay = Math.round(usage.fiveHour.utilization);
   const over90 = pctDisplay >= 90;
-
-  const formatReset = (iso) => {
-    if (!iso) return null;
-    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
 
   return (
     <span
@@ -79,7 +101,7 @@ function HorizonLine() {
             <span>session (5h)</span>
             <span>
               {pctDisplay}%
-              {usage.fiveHour.resetsAt ? ` · resets ${formatReset(usage.fiveHour.resetsAt)}` : ''}
+              {usage.fiveHour.resetsAt ? ` · resets ${formatTime(usage.fiveHour.resetsAt)}` : ''}
             </span>
           </span>
           <span className="horizon-tooltip-row">

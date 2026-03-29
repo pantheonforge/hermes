@@ -1988,6 +1988,18 @@ html, body, #root {
   background: linear-gradient(90deg, #37d676 0%, #a8ffcb 100%);
 }
 
+.horizon-line--error .horizon-fill {
+  background: linear-gradient(90deg, rgba(220, 53, 69, 0.4) 0%, #dc3545 100%);
+}
+
+.horizon-pct--error {
+  color: #ff6b7a;
+}
+
+.horizon-tooltip-error span:last-child {
+  color: #ff6b7a !important;
+}
+
 .horizon-tooltip {
   position: absolute;
   bottom: calc(100% + 6px);

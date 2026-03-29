@@ -98,8 +98,11 @@ class UsageWatcher {
       const { status, data } = await fetchUsage(token);
       if (status === 429 || data?.error?.type === 'rate_limit_error') {
         this._backoffMs = Math.min((this._backoffMs || POLL_MS) * 2, 30 * 60_000);
+        const retryAt = new Date(Date.now() + this._backoffMs).toISOString();
         this._backoffTimer = setTimeout(() => { this._backoffTimer = null; }, this._backoffMs);
         console.warn(`[usage] rate limited, backing off ${this._backoffMs / 1000}s`);
+        this._last = { rateLimited: true, retryAt };
+        this._onUpdate(this._last);
         return;
       }
       this._backoffMs = 0;
